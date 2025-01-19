@@ -1,62 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload PPTX and Convert to PDF</title>
+  <meta charset="UTF-8">
+  <title>PPTX to PDF Converter</title>
 </head>
 <body>
-    <h1>Upload PPTX and Convert to PDF</h1>
-    <form id="uploadForm" enctype="multipart/form-data">
-        <label for="pptxFile">Upload your PPTX file:</label>
-        <input type="file" id="pptxFile" name="pptxFile" accept=".pptx" required>
-        <button type="submit">Upload</button>
-    </form>
-    <div id="message"></div>
+  <h1>حوِّل PPTX إلى PDF</h1>
+  <form id="uploadForm">
+    <input type="file" id="pptxFile" name="file" accept=".pptx" required />
+    <button type="submit">رفع الملف وبدء التحويل</button>
+  </form>
+  <p id="status"></p>
+  
+  <script>
+    // ضع رابط السيرفر (Railway) هنا
+    const SERVER_URL = "https://my-pptx-converter-production.up.railway.app";
 
-    <script>
-        const form = document.getElementById("uploadForm");
-        const messageDiv = document.getElementById("message");
+    document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fileInput = document.getElementById("pptxFile");
+      if (!fileInput.files.length) {
+        alert("اختر ملف PPTX أولاً!");
+        return;
+      }
 
-        form.addEventListener("submit", async (e) => {
-            e.preventDefault();
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append("file", file);
 
-            const fileInput = document.getElementById("pptxFile");
-            const file = fileInput.files[0];
+      document.getElementById("status").textContent = "جاري الرفع والتحويل ...";
 
-            if (!file) {
-                messageDiv.innerText = "Please select a file.";
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append("file", file);
-
-            messageDiv.innerText = "Uploading...";
-
-            try {
-                const response = await fetch("https://api.github.com/repos/<USERNAME>/<REPO>/contents/uploads/" + file.name, {
-                    method: "PUT",
-                    headers: {
-                        "Authorization": "Bearer <GITHUB_TOKEN>",
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        message: "Upload file",
-                        content: btoa(await file.text()),
-                    }),
-                });
-
-                if (response.ok) {
-                    messageDiv.innerText = "File uploaded! The PDF will be available shortly.";
-                } else {
-                    const error = await response.json();
-                    messageDiv.innerText = Error: ${error.message};
-                }
-            } catch (error) {
-                messageDiv.innerText = Error: ${error.message};
-            }
+      try {
+        const response = await fetch(`${SERVER_URL}/upload`, {
+          method: "POST",
+          body: formData
         });
-    </script>
+        const data = await response.json();
+        if (response.ok && data.success) {
+          // نجح التحويل
+          document.getElementById("status").innerHTML = `
+            تم التحويل بنجاح! 
+            <a href="${SERVER_URL}${data.download_url}" target="_blank">اضغط هنا لتحميل الـPDF</a>
+          `;
+        } else {
+          document.getElementById("status").textContent = "حدث خطأ: " + data.message;
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById("status").textContent = "فشل الاتصال بالخادم.";
+      }
+    });
+  </script>
 </body>
 </html>
